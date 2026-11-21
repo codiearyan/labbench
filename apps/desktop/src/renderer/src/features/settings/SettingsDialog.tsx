@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Code, Info, Palette, Shield, Sparkles, Wrench, type LucideIcon } from 'lucide-react'
+import SiGithub from '@icons-pack/react-simple-icons/icons/SiGithub'
 import { REPO_URL } from '@shared/repo'
 import {
   CODE_THEMES,
@@ -314,14 +315,27 @@ function AboutSection(): React.JSX.Element {
           <Switch id="auto-update" checked={autoUpdate} onCheckedChange={setAutoUpdate} />
         </Row>
       </div>
-      <a
-        href={`${REPO_URL}/releases`}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-3 inline-block text-[13px] text-muted-foreground hover:text-foreground"
-      >
-        All releases
-      </a>
+      <div className="mt-3 flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-input bg-transparent shadow-none dark:bg-transparent dark:hover:bg-accent"
+          asChild
+        >
+          <a href={REPO_URL} target="_blank" rel="noreferrer">
+            <SiGithub aria-hidden />
+            GitHub
+          </a>
+        </Button>
+        <a
+          href={`${REPO_URL}/releases`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[13px] text-muted-foreground hover:text-foreground"
+        >
+          All releases
+        </a>
+      </div>
     </Group>
   )
 }
