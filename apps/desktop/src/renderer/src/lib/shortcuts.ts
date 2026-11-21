@@ -17,6 +17,7 @@ export const SHORTCUTS = {
   closeFile: { label: 'Close file', keys: 'Mod+W', scope: 'workspace' },
   runCommand: { label: 'Run the command', keys: 'Mod+Enter', scope: 'workspace' },
   suggest: { label: 'Ask for a suggestion', keys: 'Alt+\\', scope: 'editor' },
+  explainCode: { label: 'Explain this code', keys: 'Mod+Shift+E', scope: 'editor' },
   sendMessage: { label: 'Send', keys: 'Enter', scope: 'chat' },
   playPause: { label: 'Play or pause', keys: 'Space', scope: 'patterns' },
   stepBack: { label: 'Step back', keys: 'ArrowLeft', scope: 'patterns' },

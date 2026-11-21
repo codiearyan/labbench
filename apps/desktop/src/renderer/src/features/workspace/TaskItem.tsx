@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Check, Circle, Compass, ListChecks, Loader2, Sparkles, Workflow, X } from 'lucide-react'
-import type { ChapterProgress, FlowScene, FlowStep, TaskDef } from '@shared/types'
+import type { ChapterProgress, CheckDetail, FlowScene, FlowStep, TaskDef } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { useAi } from '@/features/ai/aiStore'
+import { checkAttachment, hintAttachment } from '@/features/ai/attachments'
 import { useChat } from '@/features/ai/chatStore'
 import { FlowPlayer } from '@/features/flows/FlowPlayer'
 import { TOUR } from '@/features/tour/anchors'
@@ -41,8 +42,26 @@ export function TaskItem({ task, number, progress, first, scene, flow }: Props):
   const askWhy = (): void => {
     const failing = result?.details.filter((d) => !d.passed).map((d) => d.name) ?? []
     const checks = failing.length > 0 ? ` The failing checks: ${failing.join('; ')}.` : ''
-    useChat.getState().ask(`Why did task ${number}, "${task.title}", fail?${checks}`)
+    useChat.getState().ask(`Why did task ${number}, "${task.title}", fail?${checks}`, {
+      focus: { task: number }
+    })
   }
+
+  const askAboutCheck = (detail: CheckDetail): void => {
+    useChat.getState().ask(`Why does this check fail on task ${number}?`, {
+      attachment: checkAttachment(detail),
+      focus: { task: number, check: detail.name }
+    })
+  }
+
+  const explainHint = (hint: string, hintNumber: number): void => {
+    useChat.getState().ask('Explain the idea behind this hint.', {
+      attachment: hintAttachment(hint, hintNumber),
+      focus: { task: number }
+    })
+  }
+
+  const hasFailedRows = result?.details.some((d) => !d.passed) ?? false
 
   return (
     <li className="flex gap-3 py-5">
@@ -59,7 +78,7 @@ export function TaskItem({ task, number, progress, first, scene, flow }: Props):
           </span>
         </div>
         <Markdown compact>{task.description}</Markdown>
-        {result && <CheckDetails result={result} />}
+        {result && <CheckDetails result={result} onAsk={aiOn ? askAboutCheck : undefined} />}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -109,13 +128,16 @@ export function TaskItem({ task, number, progress, first, scene, flow }: Props):
                 <li key={i}>{step}</li>
               ))}
             </ol>
-            {failed && aiOn && !nudge && <AskWhy onClick={askWhy} className="-ml-2" />}
+            {failed && aiOn && !nudge && !hasFailedRows && (
+              <AskWhy onClick={askWhy} className="-ml-2" />
+            )}
           </div>
         )}
         <TaskHints
           hints={task.hints}
           nonGreenChecks={progress?.nonGreenChecks ?? 0}
           passed={!!taskProgress?.passed}
+          onExplain={aiOn ? explainHint : undefined}
         />
         <TaskDocs task={task} progress={taskProgress} />
       </div>

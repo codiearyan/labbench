@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { SendHorizontal, Square, X } from 'lucide-react'
+import type { AiAttachment } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Markdown } from '@/features/workspace/Markdown'
-import { isShortcut } from '@/lib/shortcuts'
+import { isShortcut, shortcutLabel } from '@/lib/shortcuts'
+import { cn } from '@/lib/utils'
 import { useSettings } from '@/stores/settings'
 import { activeProvider, useAi } from './aiStore'
+import { focusLine } from './attachments'
 import { MESSAGE_BUDGET, useChat } from './chatStore'
 
 export function ChatPanel(): React.JSX.Element {
   const setPanel = useSettings((s) => s.setPanel)
   const config = useAi((s) => s.config)
   const provider = activeProvider(config)
-  const { messages, busy, error, remaining, send, stop } = useChat()
+  const { messages, busy, error, remaining, focus, send, stop } = useChat()
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
@@ -53,6 +56,11 @@ export function ChatPanel(): React.JSX.Element {
           <TooltipContent>Close tutor</TooltipContent>
         </Tooltip>
       </header>
+      {focus && (
+        <p className="shrink-0 truncate border-b border-rule px-4 py-2 text-[13px] text-muted-foreground">
+          {focusLine(focus)}
+        </p>
+      )}
 
       <div
         ref={listRef}
@@ -68,11 +76,11 @@ export function ChatPanel(): React.JSX.Element {
           <div className="flex flex-col gap-4">
             {messages.map((message, i) =>
               message.role === 'user' ? (
-                <div
-                  key={i}
-                  className="ml-8 self-end rounded-lg bg-muted px-3 py-2 text-sm leading-6 whitespace-pre-wrap"
-                >
-                  {message.content}
+                <div key={i} className="ml-8 flex min-w-0 flex-col items-end gap-1.5">
+                  {message.attachment && <Attachment attachment={message.attachment} />}
+                  <div className="rounded-lg bg-muted px-3 py-2 text-sm leading-6 whitespace-pre-wrap">
+                    {message.content}
+                  </div>
                 </div>
               ) : (
                 <div key={i} className="text-sm">
@@ -144,6 +152,22 @@ export function ChatPanel(): React.JSX.Element {
   )
 }
 
+function Attachment({ attachment }: { attachment: AiAttachment }): React.JSX.Element {
+  return (
+    <figure className="w-full min-w-0 border-l-2 border-input pl-3">
+      <figcaption className="truncate text-xs text-muted-foreground">{attachment.label}</figcaption>
+      <pre
+        className={cn(
+          'mt-1 max-h-32 overflow-auto text-xs leading-5 whitespace-pre-wrap text-muted-foreground',
+          attachment.kind === 'hint' ? 'font-sans' : 'font-mono'
+        )}
+      >
+        {attachment.text}
+      </pre>
+    </figure>
+  )
+}
+
 function EmptyState({
   hasProvider,
   loading
@@ -174,6 +198,10 @@ function EmptyState({
         guides you to the answer rather than writing it for you.
       </p>
       <p>It sees the lesson, the tasks, the file you have open and your latest check.</p>
+      <p>
+        To ask about some code, select it and pick Explain this from the right-click menu, or press{' '}
+        <kbd className="font-mono text-xs">{shortcutLabel('explainCode')}</kbd>.
+      </p>
     </div>
   )
 }

@@ -8,7 +8,8 @@ import {
   tipPrompt,
   transcript,
   trimHistory,
-  tutorSystemPrompt
+  tutorSystemPrompt,
+  withAttachment
 } from './prompt'
 
 const chapter: ChapterDef = {
@@ -130,6 +131,48 @@ describe('history', () => {
     expect(text).toContain('Learner: q1')
     expect(text).toContain('Tutor: a1')
     expect(text.endsWith('q2')).toBe(true)
+  })
+})
+
+describe('attachments', () => {
+  it('folds an attached snippet above the question and drops the field', () => {
+    const [message] = trimHistory([
+      {
+        role: 'user',
+        content: 'Explain this code.',
+        attachment: {
+          kind: 'code',
+          label: 'orders.js, line 3',
+          text: 'const a = 1',
+          language: 'js'
+        }
+      }
+    ])
+    expect(message).toEqual({
+      role: 'user',
+      content: 'Attached code (orders.js, line 3):\n\n```js\nconst a = 1\n```\n\nExplain this code.'
+    })
+  })
+
+  it('uses a longer fence when the text holds backticks', () => {
+    const text = withAttachment('Why?', { kind: 'check', label: 'Check: md', text: 'a ``` b' })
+    expect(text).toContain('````\na ``` b\n````')
+  })
+
+  it('cuts very long text and ignores a malformed attachment', () => {
+    const long = withAttachment('q', { kind: 'code', label: 'x', text: 'a'.repeat(10_000) })
+    expect(long.length).toBeLessThan(6_200)
+    expect(long).toContain('[... cut ...]')
+    const bad = { kind: 'file', label: 'x', text: 'y' } as unknown as Parameters<
+      typeof withAttachment
+    >[1]
+    expect(withAttachment('q', bad)).toBe('q')
+    expect(withAttachment('q', { kind: 'hint', label: 'x', text: '  ' })).toBe('q')
+  })
+
+  it('drops a language that is not a plain name', () => {
+    const text = withAttachment('q', { kind: 'code', label: 'x', text: 'y', language: 'js\n# x' })
+    expect(text.startsWith('Attached code (x):\n\n```\ny')).toBe(true)
   })
 })
 

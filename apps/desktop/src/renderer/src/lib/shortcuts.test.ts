@@ -3,7 +3,16 @@ import type * as Monaco from 'monaco-editor'
 import { formatKeys, matchesKeys, SHORTCUTS, toMonacoKeys } from './shortcuts'
 
 const KeyMod = { CtrlCmd: 2048, Shift: 1024, Alt: 512, WinCtrl: 256 }
-const KeyCode = { Enter: 3, Escape: 9, Space: 10, Comma: 87, Backslash: 93, KeyS: 49, Digit1: 22 }
+const KeyCode = {
+  Enter: 3,
+  Escape: 9,
+  Space: 10,
+  Comma: 87,
+  Backslash: 93,
+  KeyE: 35,
+  KeyS: 49,
+  Digit1: 22
+}
 const monaco = { KeyMod, KeyCode } as unknown as Pick<typeof Monaco, 'KeyMod' | 'KeyCode'>
 
 const press = (
@@ -64,6 +73,9 @@ describe('toMonacoKeys', () => {
     expect(toMonacoKeys(SHORTCUTS.save.keys, monaco)).toBe(KeyMod.CtrlCmd | KeyCode.KeyS)
     expect(toMonacoKeys(SHORTCUTS.check.keys, monaco)).toBe(KeyMod.CtrlCmd | KeyCode.Enter)
     expect(toMonacoKeys(SHORTCUTS.suggest.keys, monaco)).toBe(KeyMod.Alt | KeyCode.Backslash)
+    expect(toMonacoKeys(SHORTCUTS.explainCode.keys, monaco)).toBe(
+      KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyE
+    )
   })
 
   it('maps digits, Shift and named keys', () => {

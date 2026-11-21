@@ -1,4 +1,5 @@
 import type {
+  AiAttachment,
   AiMessage,
   ChapterDef,
   ChapterProgress,
@@ -11,6 +12,7 @@ import type {
 const MAX_FILE_CHARS = 20_000
 const MAX_OUTPUT_CHARS = 1_500
 const MAX_HISTORY = 20
+const MAX_ATTACHMENT_CHARS = 6_000
 
 const TUTOR_RULES = `You are the tutor inside Indent, a desktop app where a learner works through one issue of a hands-on coding repo: a short lesson, a few tasks, an editor and a terminal. Pressing Check runs hidden tests on their code. When their code calls an AI model, it talks to the local model, an offline stand-in that runs on this computer. Say repo, issue and local model when you talk about these.
 
@@ -18,6 +20,8 @@ How you help:
 - Be patient and encouraging. The learner is here to learn by doing.
 - When a check failed, explain in plain words why, using the check message and output below.
 - When asked what a line or piece of code does, explain it.
+- A learner message can start with something they attached: their own code, a check result or a hint. Attached code is the learner's own: explain what it does and point at the line or idea to look at, without rewriting it into the answer.
+- When a hint is attached, explain the idea behind it in other words and how it relates to their code. Do not turn the hint into the task's code.
 - Point to the part of the lesson that covers the idea, by its heading.
 - When a check failed, name the one link from that task's docs that covers the problem and say what to read it for. Use only the links listed with the task; never make one up.
 - Use how the earlier checks went: a check that keeps failing means the learner is stuck on that idea, so go back to it from another side.
@@ -28,7 +32,7 @@ What you never do:
 - Never write the finished answer to a task, the full file, or a drop-in fix for their code. If asked, explain the idea and give the next small step instead.
 - Never guess at or describe the hidden tests beyond what the check messages already say.
 
-Answer in short markdown: a few sentences or a short list, code in fenced blocks. Stay on this issue; for unrelated questions, say briefly that you can help with this issue.`
+Answer in short markdown: a few sentences or a short list, code in fenced blocks. Keep follow-up replies in the same conversation shorter still, two or three sentences, unless the learner asks for more. Stay on this issue; for unrelated questions, say briefly that you can help with this issue.`
 
 export interface TutorContext {
   chapter: ChapterDef
@@ -153,7 +157,33 @@ export function cleanTip(raw: string): string {
   return text.length > MAX_TIP_CHARS ? `${text.slice(0, MAX_TIP_CHARS).trimEnd()}...` : text
 }
 
-/** Keeps the latest turns, starting with a learner message, with only valid roles. */
+const ATTACHMENT_KINDS: AiAttachment['kind'][] = ['code', 'check', 'hint']
+
+/** The attachment written out above the question, the way the model reads it. */
+export function withAttachment(content: string, attachment: AiAttachment | undefined): string {
+  if (
+    !attachment ||
+    !ATTACHMENT_KINDS.includes(attachment.kind) ||
+    typeof attachment.text !== 'string' ||
+    !attachment.text.trim()
+  ) {
+    return content
+  }
+  const language =
+    attachment.kind === 'code' && /^[\w+-]{1,20}$/.test(attachment.language ?? '')
+      ? attachment.language
+      : ''
+  const label = String(attachment.label ?? attachment.kind).slice(0, 200)
+  const text = clip(attachment.text, MAX_ATTACHMENT_CHARS)
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length))
+  const fence = '`'.repeat(Math.max(3, longest + 1))
+  return `Attached ${attachment.kind} (${label}):\n\n${fence}${language}\n${text}\n${fence}\n\n${content}`
+}
+
+/**
+ * Keeps the latest turns, starting with a learner message, with only valid roles, and folds any
+ * attachment into the message text so providers get plain `{ role, content }` turns.
+ */
 export function trimHistory(messages: AiMessage[]): AiMessage[] {
   const valid = messages.filter(
     (m) =>
@@ -163,7 +193,11 @@ export function trimHistory(messages: AiMessage[]): AiMessage[] {
   )
   const recent = valid.slice(-MAX_HISTORY)
   const start = recent.findIndex((m) => m.role === 'user')
-  return start === -1 ? [] : recent.slice(start)
+  if (start === -1) return []
+  return recent.slice(start).map((m) => ({
+    role: m.role,
+    content: m.role === 'user' ? withAttachment(m.content, m.attachment) : m.content
+  }))
 }
 
 /** CLIs take a single prompt, so the conversation is written out as a transcript. */

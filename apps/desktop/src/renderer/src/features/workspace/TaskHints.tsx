@@ -1,18 +1,23 @@
 import { useState } from 'react'
-import { Lightbulb, LockIcon } from 'lucide-react'
+import { Lightbulb, LockIcon, Sparkles } from 'lucide-react'
 import { hintsUnlocked, nextLockedHint } from '@shared/rules'
 import { Button } from '@/components/ui/button'
 import { Markdown } from './Markdown'
 
-/** Reveals the unlocked hints one at a time, and says when the next one unlocks. */
+/**
+ * Reveals the unlocked hints one at a time, and says when the next one unlocks. `onExplain` is
+ * given only while the tutor is on.
+ */
 export function TaskHints({
   hints,
   nonGreenChecks,
-  passed
+  passed,
+  onExplain
 }: {
   hints: string[]
   nonGreenChecks: number
   passed: boolean
+  onExplain?(hint: string, number: number): void
 }): React.JSX.Element | null {
   const [shown, setShown] = useState(0)
   const available = Math.min(hintsUnlocked(nonGreenChecks), hints.length)
@@ -28,6 +33,17 @@ export function TaskHints({
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Hint {i + 1}</p>
             <Markdown compact>{hint}</Markdown>
+            {onExplain && (
+              <Button
+                variant="ghost"
+                size="xs"
+                className="mt-1 -ml-1.5 font-normal text-muted-foreground hover:bg-background/60 hover:text-foreground dark:hover:bg-background/40"
+                onClick={() => onExplain(hint, i + 1)}
+              >
+                <Sparkles />
+                Explain this hint
+              </Button>
+            )}
           </div>
         </div>
       ))}

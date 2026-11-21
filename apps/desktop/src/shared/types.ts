@@ -380,9 +380,20 @@ export type AiSettingsPatch = Partial<
   Pick<AiConfig, 'enabled' | 'provider' | 'model' | 'suggestions' | 'nudge'>
 >
 
+/** Code, a check or a hint the learner sends along with a question; shown in the chat as well. */
+export interface AiAttachment {
+  kind: 'code' | 'check' | 'hint'
+  /** What it is, e.g. `orders.js, lines 3 to 7` or `Check: sorts by units`. */
+  label: string
+  text: string
+  /** Fence language for code, e.g. `js`. */
+  language?: string
+}
+
 export interface AiMessage {
   role: 'user' | 'assistant'
   content: string
+  attachment?: AiAttachment
 }
 
 export interface AiChatRequest {

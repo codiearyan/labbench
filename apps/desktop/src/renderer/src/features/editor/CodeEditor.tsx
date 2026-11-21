@@ -4,6 +4,7 @@ import { monacoShortcut } from '@/lib/shortcuts'
 import { useSettings, type Typography } from '@/stores/settings'
 import { useWorkspace } from '@/stores/workspace'
 import { bindSuggestShortcut } from '@/features/ai/inlineSuggestions'
+import { bindTutorActions } from '@/features/ai/tutorActions'
 import { TOUR } from '@/features/tour/anchors'
 import { languageFor, monaco, pathOf, themeName, uriFor } from './monaco'
 
@@ -60,6 +61,7 @@ export function CodeEditor({ editorRef, onEdit, onCheck }: Props): React.JSX.Ele
       if (activePath) closeFile(activePath)
     })
     bindSuggestShortcut(monaco, editor)
+    bindTutorActions(monaco, editor)
     return () => {
       editor.dispose()
       editorRef.current = null
